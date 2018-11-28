@@ -146,6 +146,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         updateui(address, latii, Longg);
 
+
                     }
 
 
@@ -196,15 +197,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             e.printStackTrace();
         }
 
-        if(list.size()>0)
-        {
-            address= list.get(0);
-            Toast.makeText(MapsActivity.this,address.toString(),Toast.LENGTH_LONG);
+        if (list != null && list.size() > 0) {
+
+            address=list.get(0);
+            String add="";
+            if (list.get(0).getSubThoroughfare() != null) {
+                add += list.get(0).getSubThoroughfare()+" , ";                      }
+
+            if (list.get(0).getThoroughfare() != null) {
+                add += list.get(0).getThoroughfare()+" , ";                        }
+            if (list.get(0).getLocality() != null) {
+                add += list.get(0).getLocality()+" , ";
+            }
+            if (list.get(0).getCountryName() != null) {
+                add += list.get(0).getCountryName();
+            }
+
+            Toast.makeText(MapsActivity.this,add.toString(),Toast.LENGTH_LONG);
             LatLng latLng=new LatLng(address.getLatitude(),address.getLongitude());
             mMap.clear();
             mMap.addMarker(new MarkerOptions().position(latLng).title("New Location"));
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 20));
-            updateui(address.toString(),address.getLatitude(),address.getLongitude());
+            button.setVisibility(View.VISIBLE);
+            updateui(add.toString(),address.getLatitude(),address.getLongitude());
 
         }
     }
@@ -239,12 +254,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 return;
             } else {
 
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000,5 , locationListener);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000,20 , locationListener);
                 l= locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
             }
             if(l==null)
             {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 20, locationListener);
 
             }
             else {
@@ -313,7 +328,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 20, locationListener);
                     l = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
 
@@ -343,9 +358,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void RecenterClicked(View v)
     {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5, locationListener);
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 20, locationListener);
                 button.setVisibility(View.GONE);
             }
     }
