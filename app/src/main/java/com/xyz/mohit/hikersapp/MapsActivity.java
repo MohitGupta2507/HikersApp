@@ -71,6 +71,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         bottomSheetBehavior.setHideable(false);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         button = (Button) findViewById(R.id.button);
+        criteria = new Criteria();
+        criteria.setPowerRequirement(criteria.POWER_LOW);
+        criteria.setSpeedAccuracy(criteria.ACCURACY_LOW);
+        criteria.setSpeedRequired(false);
+        criteria.setAltitudeRequired(false);
+        criteria.setBearingAccuracy(0);
+        criteria.setCostAllowed(true);
+        criteria.setHorizontalAccuracy(criteria.ACCURACY_HIGH);
+        criteria.setVerticalAccuracy(criteria.ACCURACY_MEDIUM);
+        criteria.setAccuracy(criteria.ACCURACY_FINE);
+
         SearchText = (AutoCompleteTextView) findViewById(R.id.Search);
         // On Search Initiated
         GeoDataClient mGoogleApiClient;
@@ -109,7 +120,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+
+
+            // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -193,7 +206,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.clear();
                 LatLng sydney = new LatLng(latii, Longg);
                 mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
 
                 Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
 
@@ -252,38 +265,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             buildAlertMessageNoGps();
         } else {
-
-            criteria = new Criteria();
-            criteria.setPowerRequirement(criteria.POWER_LOW);
-            criteria.setSpeedAccuracy(criteria.ACCURACY_LOW);
-            criteria.setSpeedRequired(false);
-            criteria.setAltitudeRequired(false);
-            criteria.setBearingAccuracy(0);
-            criteria.setCostAllowed(true);
-            criteria.setHorizontalAccuracy(criteria.ACCURACY_HIGH);
-            criteria.setVerticalAccuracy(criteria.ACCURACY_MEDIUM);
-            criteria.setAccuracy(criteria.ACCURACY_FINE);
-
-
-            // Add a marker in Sydney and move the camera
+           // Add a marker in Sydney and move the camera
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
                 return;
             } else {
 
-                locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
+             //   locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
                 l = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            }
-            if (l == null) {
-                locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
-//                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 5, locationListener);
+                if (l == null) {
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000*60,0,locationListener);
 
-            } else {
-                mMap.clear();
-                LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
-                updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                } else {
+                    mMap.clear();
+                    LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                    mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
+                    updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                }
+
             }
             mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
                 @Override
@@ -346,9 +346,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                    locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
-                    l = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+               //     l = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    if(l!=null) {
+                        mMap.clear();
+                        LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                        mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 17));
+                        updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                    }else{
+                        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000*60,0,locationListener);
 
+                    }
 
                 }
             }
@@ -362,8 +370,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
                         startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-                        if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)                 locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
-                        locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
+                        if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+                        {
+                            l=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                            if(l==null)
+                            {
+                                int time=(1000*60);
+                                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,time,0,locationListener);
+                            } else {
+                                mMap.clear();
+                                LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                                mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 17));
+                                updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+
+                            }
+                        }
 
                     }
 
@@ -380,8 +403,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void RecenterClicked(View v) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-            locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
-            button.setVisibility(View.GONE);
+            Location l;
+            l= locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if(l==null)
+            {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000*60,0,locationListener);
+                button.setVisibility(View.GONE);
+            }
+            else
+            {
+                mMap.clear();
+                LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 17));
+                updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                button.setVisibility(View.GONE);
+
+            }
+
+
         }
     }
 
