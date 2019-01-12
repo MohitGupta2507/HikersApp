@@ -74,5 +74,16 @@
         android:text="Address"
         android:textSize="15dp" />
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="20dp"
+        android:text="ATM Nearby"
+        android:onClick="onClickButton"
+
+
+        />
+
 
 </LinearLayout>

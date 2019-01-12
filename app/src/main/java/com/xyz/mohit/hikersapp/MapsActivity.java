@@ -12,6 +12,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
@@ -19,6 +20,7 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -32,6 +34,8 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.places.AutocompleteFilter;
 import com.google.android.gms.location.places.GeoDataClient;
 import com.google.android.gms.location.places.Places;
@@ -42,6 +46,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -57,8 +62,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationManager locationManager;
     LocationListener locationListener;
     Criteria criteria;
+    int PROXIMITY_RADIUS = 10000;
     BottomSheetBehavior bottomSheetBehavior;
     Double Longg, latii;
+    protected GoogleApiClient mGoogleApiClient;
+    private FusedLocationProviderClient mFusedLocationClient;
+    double latitude,logitude;
+
 
 
     @Override
@@ -71,16 +81,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         bottomSheetBehavior.setHideable(false);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         button = (Button) findViewById(R.id.button);
-        criteria = new Criteria();
-        criteria.setPowerRequirement(criteria.POWER_LOW);
-        criteria.setSpeedAccuracy(criteria.ACCURACY_LOW);
-        criteria.setSpeedRequired(false);
+        mFusedLocationClient=LocationServices.getFusedLocationProviderClient(MapsActivity.this);
+        GoogleApiClient.ConnectionCallbacks mCall=new GoogleApiClient.ConnectionCallbacks() {
+            @Override
+            public void onConnected(@Nullable Bundle bundle) {
+
+            }
+
+            @Override
+            public void onConnectionSuspended(int i) {
+
+            }
+        };
+
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(mCall)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API).build();
+
+        //Connection Callbacks
+
+
+
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_FINE);
+        criteria.setPowerRequirement(Criteria.POWER_HIGH);
         criteria.setAltitudeRequired(false);
-        criteria.setBearingAccuracy(0);
+        criteria.setSpeedRequired(false);
         criteria.setCostAllowed(true);
-        criteria.setHorizontalAccuracy(criteria.ACCURACY_HIGH);
-        criteria.setVerticalAccuracy(criteria.ACCURACY_MEDIUM);
-        criteria.setAccuracy(criteria.ACCURACY_FINE);
+        criteria.setBearingRequired(false);
+
+//API level 9 and up
+        criteria.setHorizontalAccuracy(Criteria.ACCURACY_HIGH);
+        criteria.setVerticalAccuracy(Criteria.ACCURACY_HIGH);
 
         SearchText = (AutoCompleteTextView) findViewById(R.id.Search);
         // On Search Initiated
@@ -184,6 +217,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
+
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -272,17 +306,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             } else {
 
              //   locationManager.requestLocationUpdates(0,5,criteria,locationListener,null);
-                l = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                if (l == null) {
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000*60,0,locationListener);
-
-                } else {
-                    mMap.clear();
-                    LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
-                    mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
-                    updateui("Your Current Address", l.getLatitude(), l.getLongitude());
-                }
+                mFusedLocationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        l=location;
+                        if (l == null) {
+                            locationManager.requestLocationUpdates(1000, 1, criteria, locationListener, null);
+                        } else {
+                            latii=l.getLatitude();
+                            Longg=l.getLongitude();
+                            mMap.clear();
+                            LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                            mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
+                            updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                        }
+                    }
+                });
 
             }
             mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
@@ -326,6 +366,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    public void onClickButton(View V)
+    {
+
+        String Parks = "atm";
+        String url= Url2(latii,Longg,Parks);
+        Object dataTrasfer[]= new Object[2];
+        dataTrasfer[0]=mMap;
+        dataTrasfer[1]=url;
+
+        GetNearbyPlacesData getNearbyPlacesData=new GetNearbyPlacesData();
+        getNearbyPlacesData.execute(dataTrasfer);
+        Toast.makeText(MapsActivity.this,"Success",Toast.LENGTH_LONG).show();
+
+    }
+
+
     private void updateui(String address, double l1, double l2) {
 
         TextView t1 = (TextView) findViewById(R.id.Address);
@@ -338,6 +394,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    private String Url2(Double Lat,Double Long ,String Park)
+    {
+        StringBuilder googlePlaceUrl = new StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?");
+        googlePlaceUrl.append("location="+Lat+","+Long);
+        googlePlaceUrl.append("&radius="+PROXIMITY_RADIUS);
+        googlePlaceUrl.append("&type="+Park);
+        googlePlaceUrl.append("&sensor=true");
+        googlePlaceUrl.append("&key="+"AIzaSyBn9UtctvUrpFXLIv34x3w__vtLtOQsgis");
+
+        Log.d("MapsActivity", "url = "+googlePlaceUrl.toString());
+
+        return googlePlaceUrl.toString();
+
+
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -346,17 +417,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-               //     l = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if(l!=null) {
-                        mMap.clear();
-                        LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
-                        mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 17));
-                        updateui("Your Current Address", l.getLatitude(), l.getLongitude());
-                    }else{
-                        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000*60,0,locationListener);
-
-                    }
+                    mFusedLocationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                        @Override
+                        public void onSuccess(Location location) {
+                            l=location;
+                            if (l == null) {
+                                locationManager.requestLocationUpdates(1000, 1, criteria, locationListener, null);
+                            } else {
+                                latii=l.getLatitude();
+                                Longg=l.getLongitude();
+                                mMap.clear();
+                                LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                                mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
+                                updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                            }
+                        }
+                    });
 
                 }
             }
@@ -372,20 +449,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
                         if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
                         {
-                            l=locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
-                            if(l==null)
-                            {
-                                int time=(1000*60);
-                                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,time,0,locationListener);
-                            } else {
-                                mMap.clear();
-                                LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
-                                mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 17));
-                                updateui("Your Current Address", l.getLatitude(), l.getLongitude());
-
-                            }
+                            mFusedLocationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                                @Override
+                                public void onSuccess(Location location) {
+                                    l=location;
+                                    if (l == null) {
+                                        locationManager.requestLocationUpdates(1000, 1, criteria, locationListener, null);
+                                    } else {
+                                        latii=l.getLatitude();
+                                        Longg=l.getLongitude();
+                                        mMap.clear();
+                                        LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                                        mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
+                                        updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                                    }
+                                }
+                            });
                         }
 
                     }
@@ -403,23 +483,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void RecenterClicked(View v) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-            Location l;
-            l= locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            if(l==null)
-            {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000*60,0,locationListener);
-                button.setVisibility(View.GONE);
-            }
-            else
-            {
-                mMap.clear();
-                LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney, 17));
-                updateui("Your Current Address", l.getLatitude(), l.getLongitude());
-                button.setVisibility(View.GONE);
 
-            }
+            mFusedLocationClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    l=location;
+                    if (l == null) {
+                        locationManager.requestLocationUpdates(1000, 1, criteria, locationListener, null);
+                    } else {
+                        latii=l.getLatitude();
+                        Longg=l.getLongitude();
+                        mMap.clear();
+                        LatLng sydney = new LatLng(l.getLatitude(), l.getLongitude());
+                        mMap.addMarker(new MarkerOptions().position(sydney).title("Your Location"));
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,17));
+                        updateui("Your Current Address", l.getLatitude(), l.getLongitude());
+                    }
+                }
+            });
 
 
         }
